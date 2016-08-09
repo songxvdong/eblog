@@ -1,7 +1,8 @@
 /**
  * Created by songxvdong on 2016/8/5.
  */
-var mongodb = require('./db');
+//var Db = require('./db');
+//var pool = Db();
 
 function Comment(name, day, title, comment) {
     this.name = name;
@@ -19,14 +20,14 @@ Comment.prototype.save = function(callback) {
         title = this.title,
         comment = this.comment;
     //打开数据库
-    mongodb.open(function (err, db) {
+    pool.acquire(function (err, db) {
         if (err) {
             return callback(err);
         }
         //读取 posts 集合
         db.collection('posts', function (err, collection) {
             if (err) {
-                mongodb.close();
+                pool.release(db);
                 return callback(err);
             }
             //通过用户名、时间及标题查找文档，并把一条留言对象添加到该文档的 comments 数组里
@@ -37,7 +38,7 @@ Comment.prototype.save = function(callback) {
             }, {
                 $push: {"comments": comment}
             } , function (err) {
-                mongodb.close();
+                pool.release(db);
                 if (err) {
                     return callback(err);
                 }

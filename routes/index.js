@@ -2,8 +2,8 @@ var express = require('express');
 var multer  = require('multer');
 var router = express.Router();
 var crypto = require('crypto'),
-    User = require('../models/user.js'),
     Post = require('../models/post.js'),
+    User = require('../models/user.js'),
     Comment = require('../models/comment.js');
 
 //原版本使用方法

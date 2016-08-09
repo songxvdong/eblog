@@ -1,8 +1,25 @@
 /**
  * Created by songxvdong on 2016/8/4.
  */
-var mongodb = require('./db'),
-    markdown = require('markdown').markdown;
+var Db = require('./db');
+var markdown = require('markdown').markdown;
+var poolModule = require('generic-pool');
+global.pool = poolModule.Pool({
+    name     : 'mongoPool',
+    create   : function(callback) {
+        var mongodb = Db();
+        mongodb.open(function (err, db) {
+            callback(err, db);
+        })
+    },
+    destroy  : function(mongodb) {
+        mongodb.close();
+    },
+    max      : 100,
+    min      : 5,
+    idleTimeoutMillis : 30000,
+    log      : true
+});
 
 function Post(name, title, post) {
     this.name = name;
@@ -33,21 +50,21 @@ Post.prototype.save = function(callback) {
         comments: []
     };
     //打开数据库
-    mongodb.open(function (err, db) {
+    pool.acquire(function (err, db) {
         if (err) {
             return callback(err);
         }
         //读取 posts 集合
         db.collection('posts', function (err, collection) {
             if (err) {
-                mongodb.close();
+                pool.release(db);
                 return callback(err);
             }
             //将文档插入 posts 集合
             collection.insert(post, {
                 safe: true
             }, function (err) {
-                mongodb.close();
+                pool.release(db);
                 if (err) {
                     return callback(err);//失败！返回 err
                 }
@@ -94,14 +111,14 @@ Post.prototype.save = function(callback) {
 //一次获取十篇文章
 Post.getTen = function(name, page, callback) {
     //打开数据库
-    mongodb.open(function (err, db) {
+    pool.acquire(function (err, db) {
         if (err) {
             return callback(err);
         }
         //读取 posts 集合
         db.collection('posts', function (err, collection) {
             if (err) {
-                mongodb.close();
+                pool.release(db);
                 return callback(err);
             }
             var query = {};
@@ -117,7 +134,7 @@ Post.getTen = function(name, page, callback) {
                 }).sort({
                     time: -1
                 }).toArray(function (err, docs) {
-                    mongodb.close();
+                    pool.release(db);
                     if (err) {
                         return callback(err);
                     }
@@ -135,14 +152,14 @@ Post.getTen = function(name, page, callback) {
 //获取一篇文章
 Post.getOne = function(name, day, title, callback) {
     //打开数据库
-    mongodb.open(function (err, db) {
+    pool.acquire(function (err, db) {
         if (err) {
             return callback(err);
         }
         //读取 posts 集合
         db.collection('posts', function (err, collection) {
             if (err) {
-                mongodb.close();
+                pool.release(db);
                 return callback(err);
             }
             //根据用户名、发表日期及文章名进行查询
@@ -151,7 +168,7 @@ Post.getOne = function(name, day, title, callback) {
                 "time.day": day,
                 "title": title
             }, function (err, doc) {
-                mongodb.close();
+                pool.release(db);
                 if (err) {
                     return callback(err);
                 }
@@ -171,14 +188,14 @@ Post.getOne = function(name, day, title, callback) {
 //返回原始发表的内容（markdown 格式）
 Post.edit = function(name, day, title, callback) {
     //打开数据库
-    mongodb.open(function (err, db) {
+    pool.acquire(function (err, db) {
         if (err) {
             return callback(err);
         }
         //读取 posts 集合
         db.collection('posts', function (err, collection) {
             if (err) {
-                mongodb.close();
+                pool.release(db);
                 return callback(err);
             }
             //根据用户名、发表日期及文章名进行查询
@@ -187,7 +204,7 @@ Post.edit = function(name, day, title, callback) {
                 "time.day": day,
                 "title": title
             }, function (err, doc) {
-                mongodb.close();
+                pool.release(db);
                 if (err) {
                     return callback(err);
                 }
@@ -200,14 +217,14 @@ Post.edit = function(name, day, title, callback) {
 //更新一篇文章及其相关信息
 Post.update = function(name, day, title, post, callback) {
     //打开数据库
-    mongodb.open(function (err, db) {
+    pool.acquire(function (err, db) {
         if (err) {
             return callback(err);
         }
         //读取 posts 集合
         db.collection('posts', function (err, collection) {
             if (err) {
-                mongodb.close();
+                pool.release(db);
                 return callback(err);
             }
             //更新文章内容
@@ -218,7 +235,7 @@ Post.update = function(name, day, title, post, callback) {
             }, {
                 $set: {post: post}
             }, function (err) {
-                mongodb.close();
+                pool.release(db);
                 if (err) {
                     return callback(err);
                 }
@@ -231,14 +248,14 @@ Post.update = function(name, day, title, post, callback) {
 //删除一篇文章
 Post.remove = function(name, day, title, callback) {
     //打开数据库
-    mongodb.open(function (err, db) {
+    pool.acquire(function (err, db) {
         if (err) {
             return callback(err);
         }
         //读取 posts 集合
         db.collection('posts', function (err, collection) {
             if (err) {
-                mongodb.close();
+                pool.release(db);
                 return callback(err);
             }
             //根据用户名、日期和标题查找并删除一篇文章
@@ -249,7 +266,7 @@ Post.remove = function(name, day, title, callback) {
             }, {
                 w: 1
             }, function (err) {
-                mongodb.close();
+                pool.release(db);
                 if (err) {
                     return callback(err);
                 }
@@ -262,14 +279,14 @@ Post.remove = function(name, day, title, callback) {
 //返回所有文章存档信息
 Post.getArchive = function(callback) {
     //打开数据库
-    mongodb.open(function (err, db) {
+    pool.acquire(function (err, db) {
         if (err) {
             return callback(err);
         }
         //读取 posts 集合
         db.collection('posts', function (err, collection) {
             if (err) {
-                mongodb.close();
+                pool.release(db);
                 return callback(err);
             }
             //返回只包含 name、time、title 属性的文档组成的存档数组
@@ -280,7 +297,7 @@ Post.getArchive = function(callback) {
             }).sort({
                 time: -1
             }).toArray(function (err, docs) {
-                mongodb.close();
+                pool.release(db);
                 if (err) {
                     return callback(err);
                 }
