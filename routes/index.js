@@ -46,6 +46,7 @@ router.get('/', function(req, res, next) {
   //查询并返回第 page 页的 10 篇文章
   Post.getTen(null, page, function (err, posts, total) {
     if (err) {
+      logger.error('请求首页失败：' + err);
       posts = [];
     }
     res.render('index', {
@@ -94,6 +95,7 @@ router.post('/reg', function (req, res) {
   //检查用户名是否已经存在
   User.get(newUser.name, function (err, user) {
     if (err) {
+      logger.error('检查用户名失败：' + err);
       req.flash('error', err);
       return res.redirect('/');
     }
@@ -104,6 +106,7 @@ router.post('/reg', function (req, res) {
     //如果不存在则新增用户
     newUser.save(function (err, user) {
       if (err) {
+        logger.error('添加用户失败：' + err);
         req.flash('error', err);
         return res.redirect('/reg');//注册失败返回主册页
       }
@@ -133,6 +136,9 @@ router.post('/login', function (req, res) {
       password = md5.update(req.body.password).digest('hex');
   //检查用户是否存在
   User.get(req.body.name, function (err, user) {
+    if(err){
+      logger.error('检查用户名失败：' + err);
+    }
     if (!user) {
       req.flash('error', '用户不存在!');
       return res.redirect('/login');//用户不存在则跳转到登录页
@@ -167,6 +173,7 @@ router.post('/post', function (req, res) {
       post = new Post(currentUser.name, req.body.title, req.body.post);
   post.save(function (err) {
     if (err) {
+      logger.error('发布博客失败：' + err);
       req.flash('error', err);
       return res.redirect('/');
     }
@@ -225,6 +232,9 @@ router.get('/u/:name', function (req, res) {
   var page = parseInt(req.query.p) || 1;
   //检查用户是否存在
   User.get(req.params.name, function (err, user) {
+    if(err) {
+      logger.error('检查用户名失败：' + err);
+    }
     if (!user) {
       req.flash('error', '用户不存在!');
       return res.redirect('/');
@@ -232,6 +242,7 @@ router.get('/u/:name', function (req, res) {
     //查询并返回该用户第 page 页的 10 篇文章
     Post.getTen(user.name, page, function (err, posts, total) {
       if (err) {
+        logger.error('查询文章失败：' + err);
         req.flash('error', err);
         return res.redirect('/');
       }
@@ -252,6 +263,7 @@ router.get('/u/:name', function (req, res) {
 router.get('/archive', function (req, res) {
   Post.getArchive(function (err, posts) {
     if (err) {
+      logger.error('获取文章存档失败：' + err);
       req.flash('error', err);
       return res.redirect('/');
     }
@@ -268,6 +280,7 @@ router.get('/archive', function (req, res) {
 router.get('/u/:name/:day/:title', function (req, res) {
   Post.getOne(req.params.name, req.params.day, req.params.title, function (err, post) {
     if (err) {
+      logger.error('获取单个文章失败：' + err);
       req.flash('error', err);
       return res.redirect('/');
     }
@@ -295,6 +308,7 @@ router.post('/u/:name/:day/:title', function (req, res) {
   var newComment = new Comment(req.params.name, req.params.day, req.params.title, comment);
   newComment.save(function (err) {
     if (err) {
+      logger.error('保存留言失败：' + err);
       req.flash('error', err);
       return res.redirect('back');
     }
@@ -308,6 +322,7 @@ router.get('/edit/:name/:day/:title', function (req, res) {
   var currentUser = req.session.user;
   Post.edit(currentUser.name, req.params.day, req.params.title, function (err, post) {
     if (err) {
+      logger.error('获取编辑文章失败：' + err);
       req.flash('error', err);
       return res.redirect('back');
     }
@@ -327,6 +342,7 @@ router.post('/edit/:name/:day/:title', function (req, res) {
   Post.update(currentUser.name, req.params.day, req.params.title, req.body.post, function (err) {
     var url = encodeURI('/u/' + req.params.name + '/' + req.params.day + '/' + req.params.title);
     if (err) {
+      logger.error('编辑文章失败：' + err);
       req.flash('error', err);
       return res.redirect(url);//出错！返回文章页
     }
@@ -340,6 +356,7 @@ router.get('/remove/:name/:day/:title', function (req, res) {
   var currentUser = req.session.user;
   Post.remove(currentUser.name, req.params.day, req.params.title, function (err) {
     if (err) {
+      logger.error('删除文章失败：' + err);
       req.flash('error', err);
       return res.redirect('back');
     }
